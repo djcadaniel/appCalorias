@@ -1,19 +1,36 @@
-import { useState, ChangeEvent } from 'react'
+import { useState, ChangeEvent, FormEvent, Dispatch, useEffect } from 'react'
+import { v4 as uuidv4 } from 'uuid';
 import { categories } from '../data/categories'
 import { Activity } from '../types'
+import { ActivityActions, ActivityState } from '../reducers/activity-reducer'
 
-export default function Form() {
+type FormProps = {
+  dispatch: Dispatch<ActivityActions>,
+  state: ActivityState
+}
 
-  const [activity, setActivity] = useState<Activity>({
-    category: 1,
-    name: '',
-    calories: 0
-  })
+const initialState: Activity = {
+  id: uuidv4(),
+  category: 1,
+  name: '',
+  calories: 0
+}
+
+export default function Form({dispatch, state} : FormProps) {
+
+  const [activity, setActivity] = useState<Activity>(initialState)
+
+  useEffect(() => {
+    if(state.activeId){
+      const selectedActivity = state.activities.filter(item => item.id === state.activeId )[0]
+      setActivity(selectedActivity)
+    }
+  }, [state.activeId])
+  
 
   const handleChange = (e: ChangeEvent<HTMLSelectElement> | ChangeEvent<HTMLInputElement>) =>{
 
     const isNumberField = ['category', 'calories'].includes(e.target.id)
-    console.log(isNumberField)
 
     setActivity({
       ...activity,
@@ -21,10 +38,26 @@ export default function Form() {
     })
   }
 
+  const isValidActivity = ()=> {
+    const {name, calories} = activity
+    // console.log(name.trim() !== '' && calories > 0)
+    return name.trim() !== '' && calories > 0
+  }
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    dispatch({type: 'save-activity', payload:{newActivity: activity}})
+    setActivity({
+      ...initialState,
+      id: uuidv4()
+    })
+  }
+
   return (
     <form 
       action=""
       className='space-y-5 bg-white shadow p-10 rounded-lg'
+      onSubmit={handleSubmit}
     >
       <div className='grid grid-cols-1 gap-3'>
         <label htmlFor="category">Categoria</label>
@@ -70,8 +103,9 @@ export default function Form() {
       </div>
       <input 
         type="submit"
-        className='bg-gray-800 hover:bg-gray-900 w-full p-2 font-bold uppercase text-white cursor-pointer' 
-        value='Guardar'
+        className='bg-gray-800 hover:bg-gray-900 w-full p-2 font-bold uppercase text-white cursor-pointer disabled:opacity-10' 
+        value={activity.category === 1 ? 'Guardar Comida' : 'Guardar Ejercicio'}
+        disabled={!isValidActivity()}
       />
     </form>
   )
